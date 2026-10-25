@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduAlert - HOD Dashboard</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .hero-banner {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(15, 23, 42, 0.92) 100%), 
+                        url("{{ url_for('static', filename='college.jpg') }}") center/cover no-repeat;
+            color: #ffffff; border-radius: 20px; padding: 2.5rem 2rem;
+        }
+        .custom-card { background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; }
+        .kpi-card { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body class="pb-5">
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+                <i class="bi bi-bell-fill text-warning"></i> EduAlert SMS Portal
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="navbar-text text-light small d-none d-sm-inline">Logged in as: <strong class="text-white">{{ current_user }}</strong></span>
+                <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        
+        <!-- HERO BANNER -->
+        <div class="hero-banner text-center mb-4">
+            <h1 class="display-6 fw-bold mb-2">Department Exam Portal</h1>
+            <p class="lead opacity-90 mb-0">Automated Exam Result SMS & SQLite Analytics</p>
+        </div>
+
+        <!-- FLASHED MESSAGES -->
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                {% with messages_flash = get_flashed_messages(with_categories=true) %}
+                  {% if messages_flash %}
+                    {% for category, msg in messages_flash %}
+                      <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4" role="alert">
+                        <i class="bi bi-info-circle-fill me-2"></i> {{ msg }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+
+        <!-- UPLOAD SECTION -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-10 col-lg-8">
+                <div class="custom-card p-4 shadow-sm">
+                    <h5 class="fw-bold mb-3 text-center"><i class="bi bi-file-earmark-excel text-success me-2"></i>Upload Exam Marks Sheet</h5>
+                    
+                    <form action="/upload" method="POST" enctype="multipart/form-data">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-muted">1. Select Exam Type:</label>
+                                <select name="exam_type" class="form-select" required>
+                                    <option value="Unit 1 Test" {% if selected_exam == 'Unit 1 Test' %}selected{% endif %}>Unit 1 Test</option>
+                                    <option value="Internal Test 1" {% if selected_exam == 'Internal Test 1' %}selected{% endif %}>Internal Test 1</option>
+                                    <option value="Unit 2 Test" {% if selected_exam == 'Unit 2 Test' %}selected{% endif %}>Unit 2 Test</option>
+                                    <option value="Internal Test 2" {% if selected_exam == 'Internal Test 2' %}selected{% endif %}>Internal Test 2</option>
+                                    <option value="Model Exam" {% if selected_exam == 'Model Exam' %}selected{% endif %}>Model Exam</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-muted">2. Select Excel Sheet (.xlsx):</label>
+                                <input class="form-control" type="file" id="file" name="file" accept=".xlsx, .xls" required>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                                    <i class="bi bi-send-fill me-1"></i> Upload, Save to Database & Send SMS Alerts
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXAM FILTER & EXPORT BAR -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4 p-3 custom-card shadow-sm">
+            <div class="d-flex flex-wrap align-items-center gap-1">
+                <span class="fw-bold me-2 text-secondary"><i class="bi bi-funnel-fill me-1"></i>View Exam:</span>
+                {% for exam in ['Unit 1 Test', 'Internal Test 1', 'Unit 2 Test', 'Internal Test 2', 'Model Exam'] %}
+                    <a href="/dashboard?exam_type={{ exam }}" 
+                       class="btn btn-sm {% if selected_exam == exam %}btn-primary fw-bold{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+                        {{ exam }}
+                    </a>
+                {% endfor %}
+            </div>
+            <div>
+                <a href="/export?exam_type={{ selected_exam }}" class="btn btn-sm btn-success rounded-pill px-3 fw-semibold">
+                    <i class="bi bi-download me-1"></i> Export {{ selected_exam }} Log
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI SUMMARY CARDS -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="kpi-card p-3 text-center shadow-sm">
+                    <small class="text-muted fw-bold d-block mb-1">TOTAL STUDENTS</small>
+                    <h3 class="fw-bold text-dark mb-0">{{ total_students }}</h3>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card p-3 text-center shadow-sm">
+                    <small class="text-muted fw-bold d-block mb-1">PASSED</small>
+                    <h3 class="fw-bold text-success mb-0">{{ passed_students }}</h3>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card p-3 text-center shadow-sm">
+                    <small class="text-muted fw-bold d-block mb-1">FAILED</small>
+                    <h3 class="fw-bold text-danger mb-0">{{ failed_students }}</h3>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card p-3 text-center shadow-sm">
+                    <small class="text-muted fw-bold d-block mb-1">PASS RATE</small>
+                    <h3 class="fw-bold text-primary mb-0">{{ pass_percentage }}%</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATABASE MARKS & LOGS TABLE -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-12">
+                <div class="custom-card p-4 shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h5 class="fw-bold mb-0">
+                            <i class="bi bi-database-fill text-primary me-2"></i> Detailed Results: <span class="text-primary">{{ selected_exam }}</span>
+                        </h5>
+                        <span class="badge bg-dark rounded-pill fs-6">{{ rows|length }} Records Found</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle border">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Parent Phone</th>
+                                    <th>Status</th>
+                                    <th>Failed Count</th>
+                                    <th>Failed Subjects</th>
+                                    <th>SMS Status</th>
+                                    <th>Dispatched Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in rows %}
+                                <tr>
+                                    <td class="fw-semibold">{{ item[0] }}</td>
+                                    <td><code>{{ item[1] }}</code></td>
+                                    <td>
+                                        {% if item[4] == 'Pass' %}
+                                            <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Pass</span>
+                                        {% else %}
+                                            <span class="badge bg-danger"><i class="bi bi-x-circle-fill me-1"></i> Fail</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item[2] > 0 %}
+                                            <span class="badge bg-danger">{{ item[2] }} Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark border">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="{% if item[2] > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                                        {{ item[3] }}
+                                    </td>
+                                    <td>
+                                        {% if item[5] == 'Sent' %}
+                                            <span class="badge bg-success-subtle text-success border border-success">Sent</span>
+                                        {% else %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger">Failed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted" style="max-width: 300px;">{{ item[6] }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                                        No uploaded records stored in database for <strong>{{ selected_exam }}</strong>. Select this exam above and upload a mark sheet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
